@@ -1,0 +1,39 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Authenticate with Google
+        run: |
+          echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
+
+      - name: Compile TypeScript
+        run: npx tsc
+
+      - name: Deploy to Staging
+        if: github.event_name == 'pull_request'
+        run: |
+          npx clasp push -f --scriptId "${{ secrets.STAGING_SCRIPT_ID }}"
+
+      - name: Deploy to Production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          npx clasp push -f --scriptId "${{ secrets.PRODUCTION_SCRIPT_ID }}"
